@@ -11,6 +11,7 @@ import torch.nn as nn
 from torchvision.utils import make_grid
 from imageio import imsave
 from tqdm import tqdm
+from copy import deepcopy
 import logging
 
 from utils.inception_score import get_inception_score
@@ -74,8 +75,10 @@ def train(args, gen_net: nn.Module, dis_net: nn.Module, gen_optimizer, dis_optim
             # adjust learning rate
             if schedulers:
                 gen_scheduler, dis_scheduler = schedulers
-                gen_scheduler.step(global_steps)
-                dis_scheduler.step(global_steps)
+                g_lr = gen_scheduler.step(global_steps)
+                d_lr = dis_scheduler.step(global_steps)
+                writer.add_scalar('LR/g_lr', g_lr, global_steps)
+                writer.add_scalar('LR/d_lr', d_lr, global_steps)
 
             # moving average weight
             for p, avg_p in zip(gen_net.parameters(), gen_avg_param):
@@ -161,3 +164,13 @@ class LinearLrDecay(object):
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = lr
         return lr
+
+
+def load_params(model, new_param):
+    for p, new_p in zip(model.parameters(), new_param):
+        p.data.copy_(new_p)
+
+
+def copy_params(model):
+    flatten = deepcopy(list(p.data for p in model.parameters()))
+    return flatten

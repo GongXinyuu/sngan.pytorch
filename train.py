@@ -11,7 +11,7 @@ from __future__ import print_function
 import cfg
 import models
 import datasets
-from functions import train, validate, LinearLrDecay
+from functions import train, validate, LinearLrDecay, load_params,copy_params
 from utils.utils import set_log_dir, save_checkpoint, create_logger
 from utils.inception_score import _init_inception
 from utils.fid_score import create_inception_graph, check_or_download_inception
@@ -21,21 +21,10 @@ import os
 import numpy as np
 import torch.nn as nn
 from tensorboardX import SummaryWriter
-from copy import deepcopy
 from tqdm import tqdm
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
-
-
-def load_params(model, new_param):
-    for p, new_p in zip(model.parameters(), new_param):
-        p.data.copy_(new_p)
-
-
-def copy_params(model):
-    flatten = deepcopy(list(p.data for p in model.parameters()))
-    return flatten
 
 
 def main():
