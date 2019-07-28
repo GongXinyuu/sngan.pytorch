@@ -64,7 +64,8 @@ def train(args, gen_net: nn.Module, dis_net: nn.Module, gen_optimizer, dis_optim
         if global_steps % args.n_critic == 0:
             gen_optimizer.zero_grad()
 
-            gen_imgs = gen_net(z)
+            gen_z = torch.cuda.FloatTensor(np.random.normal(0, 1, (args.gen_batch_size, args.latent_dim)))
+            gen_imgs = gen_net(gen_z)
             fake_validity = dis_net(gen_imgs)
 
             # cal loss

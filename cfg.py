@@ -29,8 +29,14 @@ def parse_args():
         default=None,
         help='set the max iteration number')
     parser.add_argument(
-        '-bs',
-        '--batch_size',
+        '-gen_bs',
+        '--gen_batch_size',
+        type=int,
+        default=64,
+        help='size of the batches')
+    parser.add_argument(
+        '-dis_bs',
+        '--dis_batch_size',
         type=int,
         default=64,
         help='size of the batches')
@@ -44,6 +50,10 @@ def parse_args():
         type=float,
         default=0.0002,
         help='adam: disc learning rate')
+    parser.add_argument(
+        '--lr_decay',
+        action='store_true',
+        help='learning rate decay or not')
     parser.add_argument(
         '--beta1',
         type=float,
