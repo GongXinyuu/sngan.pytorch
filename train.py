@@ -131,6 +131,7 @@ def main():
             logger.info(f'Inception score: {inception_score}, FID score: {fid_score} || @ epoch {epoch}.')
             load_params(gen_net, backup_param)
             if fid_score < best_fid:
+                best_fid = fid_score
                 is_best = True
             else:
                 is_best = False
