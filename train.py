@@ -11,7 +11,7 @@ from __future__ import print_function
 import cfg
 import models
 import datasets
-from functions import train, validate, LinearLrDecay, load_params,copy_params
+from functions import train, validate, LinearLrDecay, load_params, copy_params
 from utils.utils import set_log_dir, save_checkpoint, create_logger
 from utils.inception_score import _init_inception
 from utils.fid_score import create_inception_graph, check_or_download_inception
@@ -22,6 +22,7 @@ import numpy as np
 import torch.nn as nn
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
+from copy import deepcopy
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
@@ -102,7 +103,11 @@ def main():
         dis_net.load_state_dict(checkpoint['dis_state_dict'])
         gen_optimizer.load_state_dict(checkpoint['gen_optimizer'])
         dis_optimizer.load_state_dict(checkpoint['dis_optimizer'])
-        gen_avg_param = checkpoint['gen_avg_param']
+        avg_gen_net = deepcopy(gen_net)
+        avg_gen_net.load_state_dict('avg_gen_state_dict')
+        gen_avg_param = copy_params(avg_gen_net)
+        del avg_gen_net
+
         args.path_helper = checkpoint['path_helper']
         logger = create_logger(args.path_helper['log_path'])
         logger.info(f'=> loaded checkpoint {checkpoint_file} (epoch {start_epoch})')
@@ -138,18 +143,20 @@ def main():
         else:
             is_best = False
 
+        avg_gen_net = deepcopy(gen_net)
+        load_params(avg_gen_net, gen_avg_param)
         save_checkpoint({
             'epoch': epoch + 1,
             'model': args.model,
             'gen_state_dict': gen_net.state_dict(),
             'dis_state_dict': dis_net.state_dict(),
-            'gen_avg_param': gen_avg_param,
-            'best_state_dict': gen_net.state_dict(),
+            'avg_gen_state_dict': avg_gen_net.state_dict(),
             'gen_optimizer': gen_optimizer.state_dict(),
             'dis_optimizer': dis_optimizer.state_dict(),
             'best_fid': best_fid,
             'path_helper': args.path_helper
         }, is_best, args.path_helper['ckpt_path'])
+        del avg_gen_net
 
 
 if __name__ == '__main__':

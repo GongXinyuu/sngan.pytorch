@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' Calculates the Frechet Inception Distance (FID) to evalulate GANs.
+""" Calculates the Frechet Inception Distance (FID) to evaluate GANs.
 
 The FID metric calculates the distance between two distributions of images.
 Typically, we have summary statistics (mean & covariance matrix) of one
@@ -11,10 +11,10 @@ distribution given by summary statistics (in pickle format).
 
 The FID is calculated by assuming that X_1 and X_2 are the activations of
 the pool_3 layer of the inception net for generated samples and real world
-samples respectivly.
+samples respectively.
 
 See --help to see further details.
-'''
+"""
 
 from __future__ import absolute_import, division, print_function
 import numpy as np
@@ -268,8 +268,8 @@ def calculate_activation_statistics_from_files(files, sess, batch_size=50, verbo
 # for calculating FID scores
 # -------------------------------------------------------------------------------
 def check_or_download_inception(inception_path):
-    ''' Checks if the path to the inception file is valid, or downloads
-        the file if it is not present. '''
+    """ Checks if the path to the inception file is valid, or downloads
+        the file if it is not present. """
     INCEPTION_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz'
     if inception_path is None:
         inception_path = '/tmp'
@@ -303,7 +303,7 @@ def _handle_path(path, sess, low_profile=False):
 
 
 def calculate_fid_given_paths(paths, inception_path, low_profile=False):
-    ''' Calculates the FID of two paths. '''
+    """ Calculates the FID of two paths. """
     # inception_path = check_or_download_inception(inception_path)
 
     for p in paths:

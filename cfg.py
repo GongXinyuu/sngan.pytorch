@@ -114,6 +114,11 @@ def parse_args():
         default=False,
         help='add spectral_norm on discriminator?')
     parser.add_argument(
+        '--g_spectral_norm',
+        type=str2bool,
+        default=False,
+        help='add spectral_norm on generator?')
+    parser.add_argument(
         '--dataset',
         type=str,
         default='cifar10',
