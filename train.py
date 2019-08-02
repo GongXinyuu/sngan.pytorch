@@ -104,7 +104,7 @@ def main():
         gen_optimizer.load_state_dict(checkpoint['gen_optimizer'])
         dis_optimizer.load_state_dict(checkpoint['dis_optimizer'])
         avg_gen_net = deepcopy(gen_net)
-        avg_gen_net.load_state_dict('avg_gen_state_dict')
+        avg_gen_net.load_state_dict(checkpoint['avg_gen_state_dict'])
         gen_avg_param = copy_params(avg_gen_net)
         del avg_gen_net
 
@@ -113,14 +113,15 @@ def main():
         logger.info(f'=> loaded checkpoint {checkpoint_file} (epoch {start_epoch})')
     else:
         # create new log dir
+        assert args.exp_name
         args.path_helper = set_log_dir('logs', args.exp_name)
         logger = create_logger(args.path_helper['log_path'])
 
     logger.info(args)
     writer_dict = {
         'writer': SummaryWriter(args.path_helper['log_path']),
-        'train_global_steps': 0,
-        'valid_global_steps': 0,
+        'train_global_steps': start_epoch * len(train_loader),
+        'valid_global_steps': start_epoch // args.val_freq,
     }
 
     # train loop

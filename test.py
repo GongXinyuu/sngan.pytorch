@@ -27,6 +27,7 @@ torch.backends.cudnn.benchmark = True
 def main():
     args = cfg.parse_args()
     torch.cuda.manual_seed(args.random_seed)
+    assert args.exp_name
     assert args.load_path.endswith('.pth')
     assert os.path.exists(args.load_path)
     args.path_helper = set_log_dir('logs_eval', args.exp_name)

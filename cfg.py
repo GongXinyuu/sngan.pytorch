@@ -106,7 +106,6 @@ def parse_args():
     parser.add_argument(
         '--exp_name',
         type=str,
-        required=True,
         help='The name of exp')
     parser.add_argument(
         '--d_spectral_norm',
