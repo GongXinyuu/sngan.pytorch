@@ -320,6 +320,5 @@ def calculate_fid_given_paths(paths, inception_path, low_profile=False):
         fid_value = calculate_frechet_distance(m1, s1, m2, s2)
     sess.close()
     del m1, s1, m2, s2
-    print("After sess:")
-    # memory()
+
     return fid_value
