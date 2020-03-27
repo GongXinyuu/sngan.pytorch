@@ -1,5 +1,45 @@
 import torch.nn as nn
-from .gen_resblock import GenBlock
+
+
+class GenBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, hidden_channels=None, ksize=3, pad=1,
+                 activation=nn.ReLU(), upsample=False, n_classes=0):
+        super(GenBlock, self).__init__()
+        self.activation = activation
+        self.upsample = upsample
+        self.learnable_sc = in_channels != out_channels or upsample
+        hidden_channels = out_channels if hidden_channels is None else hidden_channels
+        self.n_classes = n_classes
+        self.c1 = nn.Conv2d(in_channels, hidden_channels, kernel_size=ksize, padding=pad)
+        self.c2 = nn.Conv2d(hidden_channels, out_channels, kernel_size=ksize, padding=pad)
+
+        self.b1 = nn.BatchNorm2d(in_channels)
+        self.b2 = nn.BatchNorm2d(hidden_channels)
+        if self.learnable_sc:
+            self.c_sc = nn.Conv2d(in_channels, out_channels, kernel_size=1, padding=0)
+
+    def upsample_conv(self, x, conv):
+        return conv(nn.UpsamplingNearest2d(scale_factor=2)(x))
+
+    def residual(self, x):
+        h = x
+        h = self.b1(h)
+        h = self.activation(h)
+        h = self.upsample_conv(h, self.c1) if self.upsample else self.c1(h)
+        h = self.b2(h)
+        h = self.activation(h)
+        h = self.c2(h)
+        return h
+
+    def shortcut(self, x):
+        if self.learnable_sc:
+            x = self.upsample_conv(x, self.c_sc) if self.upsample else self.c_sc(x)
+            return x
+        else:
+            return x
+
+    def forward(self, x):
+        return self.residual(x) + self.shortcut(x)
 
 
 class Generator(nn.Module):
@@ -8,11 +48,11 @@ class Generator(nn.Module):
         self.bottom_width = args.bottom_width
         self.activation = activation
         self.n_classes = n_classes
-        self.ch = args.gf_dim
+        self.ch = 512
         self.l1 = nn.Linear(args.latent_dim, (self.bottom_width ** 2) * self.ch)
-        self.block2 = GenBlock(self.ch, self.ch, activation=activation, upsample=True, n_classes=n_classes)
-        self.block3 = GenBlock(self.ch, self.ch, activation=activation, upsample=True, n_classes=n_classes)
-        self.block4 = GenBlock(self.ch, self.ch, activation=activation, upsample=True, n_classes=n_classes)
+        self.block2 = GenBlock(256, 128, activation=activation, upsample=True, n_classes=n_classes)
+        self.block3 = GenBlock(128, 64, activation=activation, upsample=True, n_classes=n_classes)
+        self.block4 = GenBlock(64, 64, activation=activation, upsample=True, n_classes=n_classes)
         self.b5 = nn.BatchNorm2d(self.ch)
         self.c5 = nn.Conv2d(self.ch, 3, kernel_size=3, stride=1, padding=1)
 
@@ -111,15 +151,16 @@ class DisBlock(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, args, activation=nn.ReLU()):
         super(Discriminator, self).__init__()
-        self.ch = args.df_dim
         self.activation = activation
-        self.block1 = OptimizedDisBlock(args, 3, self.ch)
-        self.block2 = DisBlock(args, self.ch, self.ch, activation=activation, downsample=True)
-        self.block3 = DisBlock(args, self.ch, self.ch, activation=activation, downsample=False)
-        self.block4 = DisBlock(args, self.ch, self.ch, activation=activation, downsample=False)
-        self.l5 = nn.Linear(self.ch, 1, bias=False)
+        self.block1 = OptimizedDisBlock(args, 3, 64)
+        self.block2 = DisBlock(args, 64, 128, activation=activation, downsample=True)
+        self.block3 = DisBlock(args, 128, 256, activation=activation, downsample=True)
+        self.block4 = DisBlock(args, 256, 512, activation=activation, downsample=True)
+        self.block5 = DisBlock(args, 512, 1024, activation=activation, downsample=False)
+
+        self.l6 = nn.Linear(1024, 1, bias=False)
         if args.d_spectral_norm:
-            self.l5 = nn.utils.spectral_norm(self.l5)
+            self.l6 = nn.utils.spectral_norm(self.l6)
 
     def forward(self, x):
         h = x
@@ -127,9 +168,10 @@ class Discriminator(nn.Module):
         h = self.block2(h)
         h = self.block3(h)
         h = self.block4(h)
+        h = self.block5(h)
         h = self.activation(h)
         # Global average pooling
         h = h.sum(2).sum(2)
-        output = self.l5(h)
+        output = self.l6(h)
 
         return output
