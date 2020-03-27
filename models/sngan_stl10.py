@@ -50,11 +50,11 @@ class Generator(nn.Module):
         self.n_classes = n_classes
         self.ch = 512
         self.l1 = nn.Linear(args.latent_dim, (self.bottom_width ** 2) * self.ch)
-        self.block2 = GenBlock(256, 128, activation=activation, upsample=True, n_classes=n_classes)
-        self.block3 = GenBlock(128, 64, activation=activation, upsample=True, n_classes=n_classes)
-        self.block4 = GenBlock(64, 64, activation=activation, upsample=True, n_classes=n_classes)
-        self.b5 = nn.BatchNorm2d(self.ch)
-        self.c5 = nn.Conv2d(self.ch, 3, kernel_size=3, stride=1, padding=1)
+        self.block2 = GenBlock(512, 256, activation=activation, upsample=True, n_classes=n_classes)
+        self.block3 = GenBlock(256, 128, activation=activation, upsample=True, n_classes=n_classes)
+        self.block4 = GenBlock(128, 64, activation=activation, upsample=True, n_classes=n_classes)
+        self.b5 = nn.BatchNorm2d(64)
+        self.c5 = nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1)
 
     def forward(self, z):
 
