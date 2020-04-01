@@ -5,8 +5,6 @@ For official Chainer implementation please refer to [https://github.com/pfnet-re
 Our implementation achieves Inception score of **8.21** and FID score of **14.21** on unconditional CIFAR-10 image generation task.
 In comparison, the original paper claims **8.22** and **21.7** respectively.
 
-**NOTE**: Currently, this repo only supports unconditional CIFAR-10 image generation task.
-
 ## Set-up
 
 ### install libraries:

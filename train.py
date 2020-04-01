@@ -127,8 +127,8 @@ def main():
     }
 
     # train loop
+    lr_schedulers = (gen_scheduler, dis_scheduler) if args.lr_decay else None
     for epoch in tqdm(range(int(start_epoch), int(args.max_epoch)), desc='total progress'):
-        lr_schedulers = (gen_scheduler, dis_scheduler) if args.lr_decay else None
         train(args, gen_net, dis_net, gen_optimizer, dis_optimizer, gen_avg_param, train_loader, epoch, writer_dict,
               lr_schedulers)
 
