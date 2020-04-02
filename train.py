@@ -12,7 +12,7 @@ import cfg
 import models
 import datasets
 from functions import train, validate, LinearLrDecay, load_params, copy_params
-from utils.utils import set_log_dir, save_checkpoint, create_logger
+from utils.utils import set_log_dir, save_checkpoint, create_logger, log_image
 from utils.inception_score import _init_inception
 from utils.fid_score import create_inception_graph, check_or_download_inception
 
@@ -57,8 +57,8 @@ def main():
             nn.init.normal_(m.weight.data, 1.0, 0.02)
             nn.init.constant_(m.bias.data, 0.0)
 
-    gen_net.apply(weights_init)
-    dis_net.apply(weights_init)
+    # gen_net.apply(weights_init)
+    # dis_net.apply(weights_init)
 
     # set optimizer
     gen_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, gen_net.parameters()),
@@ -77,9 +77,11 @@ def main():
         fid_stat = 'fid_stat/fid_stats_cifar10_train.npz'
     elif args.dataset.lower() == 'stl10':
         fid_stat = 'fid_stat/stl10_train_unlabeled_fid_stats_48.npz'
+    elif args.dataset.lower() == 'imagenet':
+        fid_stat = None
     else:
         raise NotImplementedError(f'no fid stat for {args.dataset.lower()}')
-    assert os.path.exists(fid_stat)
+    # assert os.path.exists(fid_stat)
 
     # epoch number for dis_net
     args.max_epoch = args.max_epoch * args.n_critic
@@ -88,6 +90,7 @@ def main():
 
     # initial
     fixed_z = torch.cuda.FloatTensor(np.random.normal(0, 1, (25, args.latent_dim)))
+    fixed_pseudo_label = torch.randint(low=0, high=args.n_classes, size=(25, ), device='cuda')
     gen_avg_param = copy_params(gen_net)
     start_epoch = 0
     best_fid = 1e4
@@ -132,7 +135,7 @@ def main():
         train(args, gen_net, dis_net, gen_optimizer, dis_optimizer, gen_avg_param, train_loader, epoch, writer_dict,
               lr_schedulers)
 
-        if epoch and epoch % args.val_freq == 0 or epoch == int(args.max_epoch)-1:
+        if fid_stat and epoch and epoch % args.val_freq == 0 or epoch == int(args.max_epoch)-1:
             backup_param = copy_params(gen_net)
             load_params(gen_net, gen_avg_param)
             inception_score, fid_score = validate(args, fixed_z, fid_stat, gen_net, writer_dict)
@@ -148,6 +151,8 @@ def main():
 
         avg_gen_net = deepcopy(gen_net)
         load_params(avg_gen_net, gen_avg_param)
+        log_image(fixed_z, fixed_pseudo_label, avg_gen_net, writer_dict, epoch)
+
         save_checkpoint({
             'epoch': epoch + 1,
             'model': args.model,
