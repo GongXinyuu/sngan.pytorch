@@ -127,6 +127,10 @@ def parse_args():
         type=str,
         default='./data',
         help='The path of data set')
+    parser.add_argument(
+        '--path_file',
+        type=str,
+        help='The path of data set')
     parser.add_argument('--init_type', type=str, default='normal',
                         choices=['normal', 'orth', 'xavier_uniform', 'false'],
                         help='The init type')
@@ -147,6 +151,7 @@ def parse_args():
         default=4,
         help="the base resolution of the GAN")
     parser.add_argument('--random_seed', type=int, default=12345)
+    parser.add_argument('--n_classes', type=int, default=0)
 
     opt = parser.parse_args()
     return opt

@@ -5,6 +5,7 @@
 # @Version : 0.0
 
 import torch.nn as nn
+from utils.utils import CategoricalConditionalBatchNorm2d
 
 
 class GenBlock(nn.Module):
@@ -19,20 +20,24 @@ class GenBlock(nn.Module):
         self.c1 = nn.Conv2d(in_channels, hidden_channels, kernel_size=ksize, padding=pad)
         self.c2 = nn.Conv2d(hidden_channels, out_channels, kernel_size=ksize, padding=pad)
 
-        self.b1 = nn.BatchNorm2d(in_channels)
-        self.b2 = nn.BatchNorm2d(hidden_channels)
+        if n_classes > 0:
+            self.b1 = CategoricalConditionalBatchNorm2d(in_channels, n_classes)
+            self.b2 = CategoricalConditionalBatchNorm2d(hidden_channels, n_classes)
+        else:
+            self.b1 = nn.BatchNorm2d(in_channels)
+            self.b2 = nn.BatchNorm2d(hidden_channels)
         if self.learnable_sc:
             self.c_sc = nn.Conv2d(in_channels, out_channels, kernel_size=1, padding=0)
 
     def upsample_conv(self, x, conv):
         return conv(nn.UpsamplingNearest2d(scale_factor=2)(x))
 
-    def residual(self, x):
+    def residual(self, x, y=None):
         h = x
-        h = self.b1(h)
+        h = self.b1(h, y) if y is not None else self.b1(h)
         h = self.activation(h)
         h = self.upsample_conv(h, self.c1) if self.upsample else self.c1(h)
-        h = self.b2(h)
+        h = self.b2(h, y) if y is not None else self.b2(h)
         h = self.activation(h)
         h = self.c2(h)
         return h
@@ -44,5 +49,5 @@ class GenBlock(nn.Module):
         else:
             return x
 
-    def forward(self, x):
-        return self.residual(x) + self.shortcut(x)
+    def forward(self, x, y=None):
+        return self.residual(x, y) + self.shortcut(x)

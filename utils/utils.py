@@ -4,12 +4,15 @@
 # @Link    : None
 # @Version : 0.0
 
-import os
-import torch
-import dateutil.tz
-from datetime import datetime
-import time
 import logging
+import os
+import time
+from datetime import datetime
+
+import dateutil.tz
+import torch
+import torch.nn as nn
+from torchvision.utils import make_grid
 
 
 def create_logger(log_dir, phase='train'):
@@ -61,3 +64,29 @@ def save_checkpoint(states, is_best, output_dir,
     torch.save(states, os.path.join(output_dir, filename))
     if is_best:
         torch.save(states, os.path.join(output_dir, 'checkpoint_best.pth'))
+
+
+class CategoricalConditionalBatchNorm2d(nn.Module):
+    def __init__(self, num_features, num_classes):
+        super().__init__()
+        self.num_features = num_features
+        self.bn = nn.BatchNorm2d(num_features, affine=False)
+        self.embed = nn.Embedding(num_classes, num_features * 2)
+        self.embed.weight.data[:, :num_features].normal_(1, 0.02)  # Initialise scale at N(1, 0.02)
+        self.embed.weight.data[:, num_features:].zero_()  # Initialise bias at 0
+
+    def forward(self, x, y):
+        out = self.bn(x)
+        gamma, beta = self.embed(y).chunk(2, 1)
+        out = gamma.view(-1, self.num_features, 1, 1) * out + beta.view(-1, self.num_features, 1, 1)
+        return out
+
+
+def log_image(fixed_z, fixed_pseudo_label, gen_net, writer_dict, epoch):
+    writer = writer_dict['writer']
+    gen_net = gen_net.eval()
+
+    # generate images
+    sample_imgs = gen_net(fixed_z, fixed_pseudo_label)
+    img_grid = make_grid(sample_imgs, nrow=5, normalize=True, scale_each=True)
+    writer.add_image('sampled_images', img_grid, epoch)

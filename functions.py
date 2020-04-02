@@ -30,12 +30,12 @@ def train(args, gen_net: nn.Module, dis_net: nn.Module, gen_optimizer, dis_optim
     gen_net = gen_net.train()
     dis_net = dis_net.train()
 
-    for iter_idx, (imgs, _) in enumerate(tqdm(train_loader)):
+    for iter_idx, (imgs, cls) in enumerate(tqdm(train_loader)):
         global_steps = writer_dict['train_global_steps']
 
         # Adversarial ground truths
         real_imgs = imgs.type(torch.cuda.FloatTensor)
-
+        cls = cls.type(torch.cuda.LongTensor)
         # Sample noise as generator input
         z = torch.cuda.FloatTensor(np.random.normal(0, 1, (imgs.shape[0], args.latent_dim)))
 
@@ -44,11 +44,13 @@ def train(args, gen_net: nn.Module, dis_net: nn.Module, gen_optimizer, dis_optim
         # ---------------------
         dis_optimizer.zero_grad()
 
-        real_validity = dis_net(real_imgs)
-        fake_imgs = gen_net(z).detach()
+        real_validity = dis_net(real_imgs, cls)
+
+        pseudo_label = torch.randint(low=0, high=args.n_classes, size=(z.shape[0], ), device='cuda')
+        fake_imgs = gen_net(z, pseudo_label).detach()
         assert fake_imgs.size() == real_imgs.size()
 
-        fake_validity = dis_net(fake_imgs)
+        fake_validity = dis_net(fake_imgs, pseudo_label)
 
         # cal loss
         d_loss = torch.mean(nn.ReLU(inplace=True)(1.0 - real_validity)) + \
@@ -65,8 +67,9 @@ def train(args, gen_net: nn.Module, dis_net: nn.Module, gen_optimizer, dis_optim
             gen_optimizer.zero_grad()
 
             gen_z = torch.cuda.FloatTensor(np.random.normal(0, 1, (args.gen_batch_size, args.latent_dim)))
-            gen_imgs = gen_net(gen_z)
-            fake_validity = dis_net(gen_imgs)
+            pseudo_label = torch.randint(low=0, high=args.n_classes, size=(gen_z.shape[0], ), device='cuda')
+            gen_imgs = gen_net(gen_z, pseudo_label)
+            fake_validity = dis_net(gen_imgs, pseudo_label)
 
             # cal loss
             g_loss = -torch.mean(fake_validity)
@@ -134,7 +137,6 @@ def validate(args, fixed_z, fid_stat, gen_net: nn.Module, writer_dict):
 
     os.system('rm -r {}'.format(fid_buffer_dir))
 
-    writer.add_image('sampled_images', img_grid, global_steps)
     writer.add_scalar('Inception_score/mean', mean, global_steps)
     writer.add_scalar('Inception_score/std', std, global_steps)
     writer.add_scalar('FID_score', fid_score, global_steps)
